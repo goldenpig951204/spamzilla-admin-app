@@ -1,21 +1,77 @@
-const crypto = require("node:crypto");
+// const crypto = require("node:crypto");
 const settingModel = require("../models/setting");
 const credentialModel = require("../models/credential");
 const { spamzillaLog } = require("../services/logger");
 const { get } = require("lodash");
 const dvAxios = require("devergroup-request").default;
-const parseHTML = require("jquery-html-parser");
 const puppeteer = require("puppeteer-extra");
-const axios = new dvAxios({
-    axiosOpt: {
-        timeout: 30000
-    }
-});
+// const parseHTML = require("jquery-html-parser");
+
+// const axios = new dvAxios({
+//     axiosOpt: {
+//         timeout: 100000
+//     }
+// });
 
 const login = async (req, res) => {
+    let { email, password } = req.body;
     try {
-        let { email, password } = req.body;
-        
+        // let response = await axios.instance.get("https://www.spamzilla.io/account/login/");
+        // let $ = parseHTML(response.data);
+        // let token = $("meta[name='csrf-token']").attr("content");
+        // let body = `_t=${token}&LoginForm[email]=${email}&LoginForm[password]=${password}&LoginForm[rememberMe]=1&ajax=login-form`;
+        // let { data } = await axios.instance.post(
+        //     "https://www.spamzilla.io/account/login/", 
+        //     body,
+        //     {
+        //         headers: {
+        //             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36",
+        //             "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        //             "content-length": Buffer.byteLength(body),
+        //             "x-requested-with": "XMLHttpRequest",
+        //         }
+        //     }
+        // );
+        // if (Array.isArray(data) && !data.length) {
+        //     response = await axios.instance.get("https://www.spamzilla.io/account/login/");
+        //     console.log(response)
+        //     // console.log("OK");
+        //     //     let cookie = axios.cookieJar.getCookieStringSync("https://www.spamzilla.io/domains");
+        //     //     console.log(cookie);
+        //     //     res.end("OK");
+        //     // }, 10000);
+        // }
+        const windowsLikePathRegExp = /[a-z]:\\/i;
+        let inProduction = false;
+
+        if (! windowsLikePathRegExp.test(__dirname)) {
+            inProduction = true;
+        }
+        let options = {};
+        if (inProduction) {
+            options = {
+                headless : true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--media-cache-size=0',
+                    '--disk-cache-size=0',
+                    '--ignore-certificate-errors',
+                    '--ignore-certificate-errors-spki-list',
+                ],
+                timeout: 100000,
+            };
+        } else {
+            options = {
+                headless : false,
+                timeout: 100000,
+                args: [
+                    '--ignore-certificate-errors',
+                    '--ignore-certificate-errors-spki-list',
+                ],
+            };
+        }
         const browser = await puppeteer.launch({
             headless: false, timeout: 100000
         });
@@ -59,7 +115,7 @@ const login = async (req, res) => {
             }
         });
     } catch (err) {
-        spamzillaLog.error(`Start session with ${name} failed: ${get(err, "response.data.message") || err.toString()}`);
+        spamzillaLog.error(`Start session with ${email} failed: ${get(err, "response.data.message") || err.toString()}`);
         res.status(500).send(get(err, "response.data.message") || err.toString());
     }
 }
